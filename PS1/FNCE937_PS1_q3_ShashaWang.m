@@ -74,7 +74,7 @@ exit_rate_unconditional_grid = zeros(1,Nfixed_cost);
 exit_rate_desired = 0.025;
 
 tic;
-for n=1:Nfixed_cost
+for nn=1:Nfixed_cost
     k_policy_index = zeros(Na,Nk);
     k_policy = zeros(Na,Nk);
     investment_policy = zeros(Na,Nk);
@@ -95,7 +95,7 @@ for n=1:Nfixed_cost
                 a = a_grid(i);
                 k = k_grid(j);
                 labor = labor_function(a,k);
-                profit = profit_function(a,k,labor,fixed_cost_grid(n));
+                profit = profit_function(a,k,labor,fixed_cost_grid(nn));
                 investment = investment_function(k,k_grid);
                 adjustment_cost = adjustment_cost_function(investment,k);
                 divident = divident_function(profit,investment,adjustment_cost);
@@ -111,8 +111,9 @@ for n=1:Nfixed_cost
         value0=value;
         iteration = iteration + 1;
     end
-    display("iteration =    " + iteration + "   difference =   " + distance + "   fixed cost =   " + fixed_cost_grid(n))
-
+    display("iteration =    " + iteration + "   difference =   " + distance + "   fixed cost =   " + fixed_cost_grid(nn))
+    display("loop  " + nn);
+    
     %% transition prob on z*k-by-z*k space
     transition_matrix = zeros(Na*Nk,Na*Nk);
     for i=1:Na
@@ -126,7 +127,7 @@ for n=1:Nfixed_cost
 
     %% calculate invariant transition
     distribution0=( 1/(Nk*Na) )*ones(1,Nk*Na); % initial guess
-    distance=100; tolerance=0.0001;
+    distance=100; tolerance=1e-10;
     iteration = 0;
     while distance>tolerance
         distribution = distribution0*transition_matrix;
@@ -139,10 +140,10 @@ for n=1:Nfixed_cost
     distribution_Na_By_Nk=reshape(distribution,[Na,Nk]);
 
     % compute entry rate by looking at potential entrants
-    entry_rate_conditional_grid(1,n) = sum((k_policy_index(:,1)>1).* (distribution_Na_By_Nk(:,1)))/sum(distribution_Na_By_Nk(:,1));
-    exit_rate_conditional_grid(1,n) = sum(sum((k_policy_index(:,2:Nk)==1).* (distribution_Na_By_Nk(:,2:Nk))))/sum(sum(distribution_Na_By_Nk(:,2:Nk)));
-    entry_rate_unconditional_grid(1,n) = sum((k_policy_index(:,1)>1).* (distribution_Na_By_Nk(:,1)));
-    exit_rate_unconditional_grid(1,n) = sum(sum((k_policy_index(:,2:Nk)==1).* (distribution_Na_By_Nk(:,2:Nk))));
+    entry_rate_conditional_grid(1,nn) = sum((k_policy_index(:,1)>1).* (distribution_Na_By_Nk(:,1)))/sum(distribution_Na_By_Nk(:,1));
+    exit_rate_conditional_grid(1,nn) = sum(sum((k_policy_index(:,2:Nk)==1).* (distribution_Na_By_Nk(:,2:Nk))))/sum(sum(distribution_Na_By_Nk(:,2:Nk)));
+    entry_rate_unconditional_grid(1,nn) = sum((k_policy_index(:,1)>1).* (distribution_Na_By_Nk(:,1)));
+    exit_rate_unconditional_grid(1,nn) = sum(sum((k_policy_index(:,2:Nk)==1).* (distribution_Na_By_Nk(:,2:Nk))));
 
 end
 toc;
