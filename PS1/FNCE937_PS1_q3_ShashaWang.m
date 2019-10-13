@@ -19,7 +19,6 @@ m = 4;
 %Na = 2*m+1;
 Na = 15;
 
-
 % exit rate calibrated to 2.5%
 
 %% k_grid & a_grid
@@ -142,8 +141,8 @@ for nn=1:Nfixed_cost
         value0(:,:,nn)=value(:,:,nn);
         iteration = iteration + 1;
     end
-    display("iteration =    " + iteration + "   difference =   " + distance + "   fixed cost =   " + fixed_cost_grid(nn))
     display("loop  " + nn);
+    display("iteration =    " + iteration + "   difference =   " + distance + "   fixed cost =   " + fixed_cost_grid(nn))
     
     %% transition prob on z*k-by-z*k space
     for i=1:Na
@@ -168,39 +167,13 @@ for nn=1:Nfixed_cost
     % transform distribution vector into a matrix
     distribution_Na_By_Nk(:,:,nn)=reshape(distribution,[Na,Nk]);
 
-    % compute entry rate by looking at potential entrants
-    %entry_rate_conditional_grid(1,nn) = sum((k_policy_index(:,1)>1).* (distribution_Na_By_Nk(:,1)))/sum(distribution_Na_By_Nk(:,1));
-    %exit_rate_conditional_grid(1,nn) = sum(sum((k_policy_index(:,2:Nk)==1).* (distribution_Na_By_Nk(:,2:Nk))))/sum(sum(distribution_Na_By_Nk(:,2:Nk)));
-    %entry_rate_unconditional_grid(1,nn) = sum((k_policy_index(:,1)>1).* (distribution_Na_By_Nk(:,1)));
-    %exit_rate_unconditional_grid(1,nn) = sum(sum((k_policy_index(:,2:Nk)==1).* (distribution_Na_By_Nk(:,2:Nk))));
     exit_rate_grid(1,nn) = sum(sum(exit_policy(:,:,nn) .* (distribution_Na_By_Nk(:,:,nn))));
     display("exit rate =  " + exit_rate_grid(1,nn));
 
 end
 toc;
 
-
 close all;
-% figure(1);
-% subplot(2,1,1)
-% plot(fixed_cost_grid,exit_rate_conditional_grid);
-% yline(exit_rate_desired);
-% %ylim([0,max(exit_rate_grid)])
-% xlim([fixed_cost_min,fixed_cost_max])
-% xlabel('fixed cost');
-% ylabel('conditional exit rate');
-% title('conditional exit rate under different fixed cost');
-% %savefig('q3a_fixed_cost_exit_rate_conditional')
-% 
-% subplot(2,1,2)
-% plot(fixed_cost_grid,exit_rate_unconditional_grid);
-% yline(exit_rate_desired);
-% %ylim([0,max(exit_rate_grid)])
-% xlim([fixed_cost_min,fixed_cost_max])
-% xlabel('fixed cost');
-% ylabel('unconditional exit rate');
-% title('unconditional exit rate under different fixed cost');
-% savefig('q3a_fixed_cost_exit_rate')
 
 figure(1);
 plot(fixed_cost_grid,exit_rate_grid);
@@ -237,7 +210,7 @@ end
 
 aggregate_labor_demand = sum(sum(distribution_Na_By_Nk(:,:,ind) .* labor_demand));
 
-% in equilibrium supply=demand
+% In equilibrium, supply==demand
 B = aggregate_labor_demand/W^0.1;
 
 % entry rate
@@ -264,23 +237,7 @@ while distance>tolerance
     iteration = iteration+1;
 end
 
-% This part is revised - the method of computing the entry cost - expected
-% value of v(a,k_grid(1))
-% conditional on (a_i,k),compute the expected value of state (a_j,k(a_i,k))
-% value_next_period = zeros(1,Na);
-% value_entry = zeros(1,Na);
-% for ai = 1:Na % this period shock
-%     k_prime_index = k_policy_index(ai,1);
-%     for aii = 1:Na % next period shock
-%         value_next_period(1,aii) = value(aii,k_prime_index);
-%     end
-%     value_entry(1:ai) = sum(a_prob(ai,:).* value_next_period); % conditional on a_i, the expected value
-% end
-
-% then compute the expected value
-% expected_value_entry = sum(value_entry .* distribution_a);
-
-%% compute the expected value
+% compute the expected value
 expected_value_entry = sum(value(:,1,ind)' .* distribution_a);
 
 display('Setting next period capital stock according to this period shock, ')
@@ -288,30 +245,6 @@ display("Entry cost =    " + expected_value_entry  );
 assert(expected_value_entry>0);
 display('As expected, the entry cost is positive.');
 display('Since it is in a stationary distribution setting, entry rate should be equal to exit rate, ' + exit_rate);
-
-% %% Using LG's method of computing entry cost
-% % conditional on (a_i,k),compute the expected value of state (a_j,k(a_i,k))
-% value_next_period = zeros(1,Na);
-% value_entry = zeros(1,Na);
-% for ai = 1:Na % this period shock
-%     for aii = 1:Na % next period shock
-%         k_prime_index = k_policy_index(aii,1);
-%         value_next_period(1,aii) = value(aii,k_prime_index);
-%     end
-%     value_entry(1:ai) = sum(a_prob(ai,:).* value_next_period); % conditional on a_i, the expected value
-% end
-% 
-% % then compute the expected value
-% expected_value_entry_LG = sum(value_entry .* distribution_a);
-% 
-% display('Using another method suggested by LG, which set next period capital stock according to the next period shock,')
-% display("Entry cost =    " + expected_value_entry_LG  );
-% assert(expected_value_entry_LG>0);
-% display('As expected, the entry cost is positive.');
-% 
-% assert(abs(expected_value_entry_LG-expected_value_entry)<0.00001);
-% display('Please note that the results are the same. The two methods are not necessairily equivalent, but the difference in results is too subtle to be significant.');
-
 
 %% q3b suppose B=1; What is the mass of firms
 B2 = 1;
