@@ -22,7 +22,7 @@ Na = 15;
 
 % exit rate calibrated to 2.5%
 
-%% k_grid
+%% k_grid & a_grid
 Nk = 100;
 k_min = 0.000001;
 %k_min = 0;
@@ -61,8 +61,8 @@ adjustment_cost_function = @(investment,k)0.5*k*(investment/k-delta).^2;
 divident_function = @(profit,investment,adjustment_cost)profit-investment-adjustment_cost;
 
 %% Value Function Iteration and Policy Function
+% loop over different fixed cost
 
-%% loop over different fixed cost
 Nfixed_cost = 10;
 % fixed_cost_min = 0.050301111111111;
 % fixed_cost_max = 0.050346666666667;
@@ -215,7 +215,7 @@ savefig('q3a_fixed_cost_exit_rate')
 % [v,ind]=min(abs(exit_rate_unconditional_grid-exit_rate_desired));
 [v,ind]=min(abs(exit_rate_grid-exit_rate_desired));
 
-%% Plot the stationary distribution when the measure of firms is 1
+%% q3a Plot the stationary distribution when the measure of firms is 1
 figure(2)
 [aa,kk]=meshgrid(a_grid, k_grid);
 mesh(aa, kk, distribution_Na_By_Nk(:,:,ind)')
@@ -287,6 +287,7 @@ display('Setting next period capital stock according to this period shock, ')
 display("Entry cost =    " + expected_value_entry  );
 assert(expected_value_entry>0);
 display('As expected, the entry cost is positive.');
+display('Since it is in a stationary distribution setting, entry rate should be equal to exit rate, ' + exit_rate);
 
 % %% Using LG's method of computing entry cost
 % % conditional on (a_i,k),compute the expected value of state (a_j,k(a_i,k))
