@@ -1,5 +1,4 @@
-% Shasha Wang PS1 FNCE 937
-clc
+% Shasha Wang PS1 Q1 FNCE 937
 clear all;
 close all;
 
@@ -76,7 +75,7 @@ savefig('q1a')
 
 %% a's transition matrix
 
-[Z,a_prob] = tauchen(Na,log_a_mean,rho,sigma,m);
+[Z,a_prob] = tauchen(Na,log_a_mean,rho,sigma,4);
 assert(sum(abs(Z-log_a_grid))<0.01);
 
 a_grid = exp(log_a_grid);
@@ -509,7 +508,8 @@ toc;
 
 optimal_investment_at_mean_shock(3,:)=investment_policy3(m+1,:); 
 
-%% q1d4 b_0=0.02,b_1=0.5
+%% q1d4 b_0=0.02,b_1=0.5 unless i=delta*k, i.e., just replacing...
+% depreciated capital takes no adjustment cost
 b_0=0.02;
 b_1=0.5;
 adjustment_cost = @(investment,k)b_0*k*(investment~=delta*k) + b_1*k*(investment/k-delta).^2;
@@ -558,6 +558,7 @@ end
 display("iteration =    " + iteration + "   difference =   " + distance)
 toc;
 
+%% Plot the whole graph 
 optimal_investment_at_mean_shock(4,:)=investment_policy4(m+1,:);
 
 figure(1)
@@ -567,5 +568,3 @@ ylabel('Optimal Investment at Mean Shock')
 xlabel('Current Capital Stock')
 legend('low adj. cost','high adj. cost','asymmetric adj. cost','fixed cost');
 savefig('q1d_investment_policy') 
-
-
