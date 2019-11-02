@@ -167,10 +167,12 @@ mRb = min(Rf/mCarryOnProbability,1000000);
 % profitFunction = @(a,k,labor)a.* k.^aalphaK.* labor.^aalphaL - W*labor;
 profitFunction = @(a,k)a.* k.^aalphaK.* ((k.^aalphaK * aalphaL).* a/W).^(aalphaL/(1-aalphaL)) - W * ((k.^aalphaK * aalphaL).* a/W).^(1/(1-aalphaL));
 nonDefaultFunction = @ (profit,k,bond)((1-ttaoC)*profit + (1-ddelta)*k > bond);
-isDefaultNextPeriod2DFunction = @(ia,mIsDefaultNextPeriod3D)(mIsDefaultNextPeriod3D(:,:,ia));
+% isDefaultNextPeriod2DFunction =
+% @(ia,mIsDefaultNextPeriod3D)(mIsDefaultNextPeriod3D(:,:,ia)); % never used below
 
 % profit = a^(1/(1-aalphaL)) * (k.^aalphaK * (aalphaL * k.^aalphaK / W).^(aalphaL/(1-aalphaL)) - W * (aalphaL * k.^aalphaK/W).^(1/(1-aalphaL)));
-investmentFunction = @(k,kPrime,mIsDefaultNextPeriod)kPrime.*(1-mIsDefaultNextPeriod) - (1-ddelta)*k; %k_prime usually is k_grid
+% investmentFunction = @(k,kPrime,mIsDefaultNextPeriod)kPrime.*(1-mIsDefaultNextPeriod) - (1-ddelta)*k; %k_prime usually is k_grid
+investmentFunction = @(k,kPrime)kPrime - (1-ddelta)*k; %k_prime usually is k_grid
 taxPaymentsFunction = @(k,bond,profit,RbMinus)ttaoC * (profit - ddelta*k - bond.* (RbMinus-1).* ((1-ttaoC)*profit + (1-ddelta)*k > bond)); % note the non-default indicator
 % taxPaymentsFunction = @(k,bond,profit,Rb)ttaoC * (profit - ddelta*k - bond * (Rb-1)); % note the non-default indicator
 % taxPaymentsFunction = @(k,bond,profit,Rb)ttaoC * (profit - ddelta*k - bond * (Rb-1)); % without the non-default indicator
@@ -245,13 +247,31 @@ for i=1:length(kGridLength)
 
     kPrime = repmat(grid_k,1,Nb); % Nk*Nb matrix
     bondPrime = repmat(grid_b',kGridLength(i),1); % Nk*Nb matrix
+    
+    % transition matrix for (k',b',a, k)->k'_actually
+%     kPrimeIfDefaultKnownForSureToday = zeros(kGridLength(i),Nb,kGridLength(i),Na); % k',b',k
+%     for ik = 1:kGridLength(i)
+%         comparison = abs(grid_k-grid_k(ik)*(1-ddelta));
+%         ind_kPrime = find(comparison == min(comparison));
+%         for ia = 1:Na
+%         kPrimeIfDefaultKnownForSureToday(:,:,ik) = grid_k(ind_kPrime).*;
+%         
+%     for ibPrime = 1:Nb
+%         for ikPrime = 1:kGridLength(i)
+%             comparison = abs(grid_k-grid_k(ik)*(1-ddelta)); % See how much capital there will actually be left tomorrow
+%             ind_kPrime = find(comparison == min(comparison));
+%             valueTomorrowIfDefaultKnownForSureToday(ikPrime,ibPrime,:) = isDefaultNextPeriod(ikPrime,ibPrime) * reshape(m_a_prob(ia,:),1,1,3).* reshape(value0(ind_kPrime,1,:,ia),1,1,3);
+%         end
+%     end
+%     mExpectedValueTomorrowIfDefaultKnownForSureToday = sum(valueTomorrowIfDefaultKnownForSureToday,3); % sum by the third dimension to get a Nk*Nb matrix
+
 
     tic
     while distance > tolerance
 %         tic
         for ia=1:Na
             a = grid_a(ia);
-            isDefaultNextPeriod = mIsDefaultNextPeriod(:,:,ia);
+            isDefaultNextPeriod = mIsDefaultNextPeriod(:,:,ia); % Nk*Nb matrix
 
             for ik=1:kGridLength(i)
                 k = grid_k(ik);        
@@ -259,7 +279,7 @@ for i=1:length(kGridLength)
 %                 profit = profitFunction(a,k,labor);
 %                 profitFunction(a,k); % scalar
                 profit = profitNkByNa(ik,ia);% scalar
-                investment = investmentFunction(k,kPrime,isDefaultNextPeriod); % Nk*Nb matrix
+                investment = investmentFunction(k,kPrime); % Nk*Nb matrix
 
                 for iaMinus = 1:Na
                     RbMinus = mRb(:,:,iaMinus); % Nk*Nb matrix
@@ -268,33 +288,54 @@ for i=1:length(kGridLength)
                     for ib = 1:Nb
                         bond = grid_b(ib);
 
-                        if (1-ttaoC)*profit + (1-ddelta)*k <= bond
+                        if (1-ttaoC)*profit + (1-ddelta)*k <= bond % if default this period
                             value (ik,ib,ia,iaMinus)=0; % You stop operating the firm and stop choosing next period k' and b'
+                            % nothing will happen to policy function index matrix or function matrix - entry remains 0
+                            
 %                             kPolicyIndex(ik,ib,ia,iaMinus) = 1;
 %                             bPolicyIndex(ik,ib,ia,iaMinus) = 1;
 % 
 %                             kPolicy(ik,ib,ia,iaMinus) = grid_k(1);
 %                             bPolicy(ik,ib,ia,iaMinus) = grid_b(1);
 
-                        else
+                        else % if not default this period
 
                             taxPayments = taxPaymentsFunction(k,bond,profit,RbMinus); % Nk*Nb matrix
                             divident = dividentFunction(profit,investment,bond,bondPrime,RbMinus,taxPayments,isDefaultNextPeriod); % Nk*Nb matrix
-                      
-
-                            valueTomorrow = zeros(kGridLength(i),Nb,Na); % k',b',a'
+                             
+%                             valueTomorrowIfDefaultKnownForSureToday = zeros(kGridLength(i),Nb,Na); % k',b',a'
+%                             for iaPrime = 1:Na
+%                                 aPrime = grid_a(iaPrime);
+%                                 kPrime = %Nk*Nb matrix
+% %                                 laborPrime = laborFunction(aPrime,kPrime);
+% %                                 profitPrime = profitFunction(aPrime,kPrime,laborPrime);
+% %                                 profitPrime = profitFunction(aPrime,kPrime); % Nk*Nb
+%                                 profitPrime = repmat(profitNkByNa(:,iaPrime),1,Nb);% Nk*Nb %也需要retrieve
+%                                 
+%                             valueTomorrowIfDefaultKnownForSureToday(:,:,iaPrime) = value0(:,:,iaPrime,ia).*isDefaultNextPeriod.* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime);
+%                             for ibPrime = 1:Nb
+%                                 for ikPrime = 1:kGridLength(i)
+%                                     comparison = abs(grid_k-grid_k(ik)*(1-ddelta)); % See how much capital there will actually be left tomorrow
+%                                     ind_kPrime = find(comparison == min(comparison));
+%                                     valueTomorrowIfDefaultKnownForSureToday(ikPrime,ibPrime,:) = isDefaultNextPeriod(ikPrime,ibPrime) * reshape(m_a_prob(ia,:),1,1,3).* reshape(value0(ind_kPrime,1,:,ia),1,1,3);
+%                                 end
+%                             end
+%                             mExpectedValueTomorrowIfDefaultKnownForSureToday = sum(valueTomorrowIfDefaultKnownForSureToday,3); % sum by the third dimension to get a Nk*Nb matrix
+                          
+                            
+                            valueTomorrow = zeros(kGridLength(i),Nb,Na); % k',b',a'                            
                             for iaPrime = 1:Na % iterate over all possible states for tomorrow
                                 aPrime = grid_a(iaPrime);
-%                                 laborPrime = laborFunction(aPrime,kPrime);
-%                                 profitPrime = profitFunction(aPrime,kPrime,laborPrime);
-%                                 profitPrime = profitFunction(aPrime,kPrime); % Nk*Nb
                                 profitPrime = repmat(profitNkByNa(:,iaPrime),1,Nb);% Nk*Nb
-                                            
-                                valueTomorrow(:,:,iaPrime) = value0(:,:,iaPrime,ia) * m_a_prob(ia,iaPrime) .* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime);% 需要考虑default之后value为0
+                                valueTomorrow(:,:,iaPrime) = m_a_prob(ia,iaPrime) * ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)...% 需要考虑default之后value为0
+                                    .*( value0(:,:,iaPrime,ia).*(1-isDefaultNextPeriod)...% if known today for sure that NO default next period
+                                    + repmat(value0(:,1,iaPrime,ia),1,Nb).*isDefaultNextPeriod); % if known today for sure WILL default next period
                             end
-                            valueTomorrow = sum(valueTomorrow,3); % sum by the third dimension to get a Nk*Nb matrix
-
-                            x = divident + M * valueTomorrow;
+                            mExpectedValueTomorrow = sum(valueTomorrow,3); % sum by the third dimension to get a Nk*Nb matrix
+                            
+%                             mExpectedValueTomorrow = mExpectedValueTomorrowIfDefaultKnownForSureToday + mExpectedValueTomorrowIfDefaultKnownNotForSureToday;
+                            
+                            x = divident + M * mExpectedValueTomorrow;
 
                             [rows,cols]=find(x==max(max(x)));
 
@@ -481,7 +522,7 @@ for i=1:length(kGridLength)
 %         tic
         for ia=1:Na
             a = grid_a(ia);
-            isDefaultNextPeriod = mIsDefaultNextPeriod(:,:,ia);
+            isDefaultNextPeriod = mIsDefaultNextPeriod(:,:,ia); % Nk*Nb matrix
             
             for ik=1:kGridLength(i)
                 k = grid_k(ik);        
@@ -489,7 +530,7 @@ for i=1:length(kGridLength)
 %                 profit = profitFunction(a,k,labor);        
 %                 profit = profitFunction(a,k); 
                 profit = profitNkByNa(ik,ia);
-                investment = investmentFunction(k,kPrime,isDefaultNextPeriod); % Nk*Nb matrix
+                investment = investmentFunction(k,kPrime); % Nk*Nb matrix
 
                 for iaMinus = 1:Na
                     RbMinus = mRb(:,:,iaMinus); % Nk*Nb matrix
@@ -498,31 +539,37 @@ for i=1:length(kGridLength)
                     for ib = 1:Nb
                         bond = grid_b(ib);
 
-                        if (1-ttaoC)*profit + (1-ddelta)*k <= bond
-                            value (ik,ib,ia,iaMinus)=value0(1,1,ia,iaMinus);
+                        if (1-ttaoC)*profit + (1-ddelta)*k <= bond % if default this period
+                            value (ik,ib,ia,iaMinus)=value0(1,1,ia,iaMinus); % after restructuring, you continue to run the firm at square 1 with 0 capital and 0 bond
                             
-                            kPolicyIndex(ik,ib,ia,iaMinus) = kPolicyIndex(1,1,ia,iaMinus) ;
+                            kPolicyIndex(ik,ib,ia,iaMinus) = kPolicyIndex(1,1,ia,iaMinus) ; % policy function is the same as when you are at square 1
                             bPolicyIndex(ik,ib,ia,iaMinus) = bPolicyIndex(1,1,ia,iaMinus) ;
 
                             kPolicy(ik,ib,ia,iaMinus) = grid_k(kPolicyIndex(1,1,ia,iaMinus));
                             bPolicy(ik,ib,ia,iaMinus) = grid_b(bPolicyIndex(1,1,ia,iaMinus));
 
-                        else
+                        else % if not default this period
 
                             taxPayments = taxPaymentsFunction(k,bond,profit,RbMinus); % Nk*Nb matrix
                             divident = dividentFunction(profit,investment,bond,bondPrime,RbMinus,taxPayments,isDefaultNextPeriod); % Nk*Nb matrix
 
                             valueTomorrow = zeros(kGridLength(i),Nb,Na);% k',b',a'
+                            
                             for iaPrime = 1:Na % iterate over all possible states for tomorrow
                                 aPrime = grid_a(iaPrime);
-%                                 laborPrime = laborFunction(aPrime,kPrime);
-%                                 profitPrime = profitFunction(aPrime,kPrime,laborPrime);
-%                                 profitPrime = profitFunction(aPrime,kPrime);
                                 profitPrime = repmat(profitNkByNa(:,iaPrime),1,Nb);% Nk*Nb
-                                
                                
-                                valueTomorrow(:,:,iaPrime) =  m_a_prob(ia,iaPrime) * (value0(:,:,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)...
-                                    +value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime));% 需要考虑default之后value不是为0，而是为set bond and capital to 0的value
+%                                 valueTomorrow(:,:,iaPrime) =  m_a_prob(ia,iaPrime) * ... % 需要考虑default之后value不是为0，而是为set bond and capital to 0的value
+%                                     (value0(:,:,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)... % if not default next period
+%                                     + value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime));% if default next period
+%                                 
+                                valueTomorrow(:,:,iaPrime) =  m_a_prob(ia,iaPrime) *( ...% 需要考虑default之后value不是为0，而是为set bond and capital to 0的value
+                                    (1-isDefaultNextPeriod).*(...% if known today not for sure that default will happen next period
+                                    value0(:,:,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)... 
+                                    + value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime))...
+                                    +isDefaultNextPeriod.* ... % if known today for sure WILL default next period
+                                    (repmat(value0(:,1,iaPrime,ia),1,Nb).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)... % next period if not default 
+                                    + value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime)));% next period if default 
                             end
                             mExpectedValueTomorrow = sum(valueTomorrow,3); % sum by the third dimension to get a Nk*Nb matrix
 
@@ -772,7 +819,7 @@ for ia = 1:Na
     end
 end
     
-mInvestment4D = investmentFunction(mK4D,mK4D,mIsDefaultNextPeriod4D);
+mInvestment4D = investmentFunction(mK4D,mK4D);
 mTaxPayments4D = taxPaymentsFunction(mK4D,mBond4D,mProfit4D,mRbMinus4D);
 mDivident4D = dividentFunction(mProfit4D,mInvestment4D,mBond4D,mBond4D,mRbMinus4D,mTaxPayments4D,mIsDefaultNextPeriod4D);
 
