@@ -1,4 +1,4 @@
-% Shasha Wang PS1 Q3 FNCE 937
+% Shasha Wang PS2 Q1 FNCE 937
 
 % If one wants to do MULTIGRID to speed up the process, just change
 % kGridLength to a vector
@@ -188,8 +188,9 @@ dividentFunction = @(profit,investment,bond,bondPrime,RbMinus,taxPayments,mIsDef
 % Use multigrid method to speed up iteration
 kGridLength           = [15]; % number of points in grid for capital
 kMin            = 0.000001;
-kMax            = 10 * kSteadyState;
-grid_b = curvspace(0,kMax,Nb,2)';
+kMax            = 2.5 * kSteadyState;
+bMax            = 2 * kSteadyState; % These are all by trial and error - try arbitrary values and see how the distribution looks
+grid_b = curvspace(0,bMax,Nb,2)';
 
 % Required matrices and vectors
 % Dimensionality is k,b,a,aMinus
@@ -281,26 +282,24 @@ for i=1:length(kGridLength)
                 profit = profitNkByNa(ik,ia);% scalar
                 investment = investmentFunction(k,kPrime); % Nk*Nb matrix
 
-                for iaMinus = 1:Na
-                    RbMinus = mRb(:,:,iaMinus); % Nk*Nb matrix
-                    aMinus = grid_a(iaMinus);
 
-                    for ib = 1:Nb
-                        bond = grid_b(ib);
+
+                for ib = 1:Nb
+                    bond = grid_b(ib);
+                    for iaMinus = 1:Na
+                        RbMinus = mRb(ik,ib,iaMinus); % scalar
+                        aMinus = grid_a(iaMinus);
 
                         if (1-ttaoC)*profit + (1-ddelta)*k <= bond % if default this period
                             value (ik,ib,ia,iaMinus)=0; % You stop operating the firm and stop choosing next period k' and b'
-                            % nothing will happen to policy function index matrix or function matrix - entry remains 0
-                            
-%                             kPolicyIndex(ik,ib,ia,iaMinus) = 1;
-%                             bPolicyIndex(ik,ib,ia,iaMinus) = 1;
+%                             % nothing will happen to policy function index matrix or function matrix - entry remains 0
+%                             
 % 
-%                             kPolicy(ik,ib,ia,iaMinus) = grid_k(1);
-%                             bPolicy(ik,ib,ia,iaMinus) = grid_b(1);
-
                         else % if not default this period
 
-                            taxPayments = taxPaymentsFunction(k,bond,profit,RbMinus); % Nk*Nb matrix
+%                         if (1-ttaoC)*profit + (1-ddelta)*k > bond % if default this period
+
+                            taxPayments = taxPaymentsFunction(k,bond,profit,RbMinus); % scalar
                             divident = dividentFunction(profit,investment,bond,bondPrime,RbMinus,taxPayments,isDefaultNextPeriod); % Nk*Nb matrix
                              
 %                             valueTomorrowIfDefaultKnownForSureToday = zeros(kGridLength(i),Nb,Na); % k',b',a'
@@ -327,9 +326,18 @@ for i=1:length(kGridLength)
                             for iaPrime = 1:Na % iterate over all possible states for tomorrow
                                 aPrime = grid_a(iaPrime);
                                 profitPrime = repmat(profitNkByNa(:,iaPrime),1,Nb);% Nk*Nb
-                                valueTomorrow(:,:,iaPrime) = m_a_prob(ia,iaPrime) * ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)...% 需要考虑default之后value为0
-                                    .*( value0(:,:,iaPrime,ia).*(1-isDefaultNextPeriod)...% if known today for sure that NO default next period
-                                    + repmat(value0(:,1,iaPrime,ia),1,Nb).*isDefaultNextPeriod); % if known today for sure WILL default next period
+%                                 valueTomorrow(:,:,iaPrime) = m_a_prob(ia,iaPrime) * ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)...% 需要考虑default之后value为0
+%                                     .*( value0(:,:,iaPrime,ia).*(1-isDefaultNextPeriod)...% if known today for sure that NO default next period
+%                                     + repmat(value0(:,1,iaPrime,ia),1,Nb).*isDefaultNextPeriod); % if known today for sure WILL default next period
+                                
+                                valueTomorrow(:,:,iaPrime) =  m_a_prob(ia,iaPrime) *( ...% default之后value是0。两点考虑，按照时间顺序：今天lender想，他来找我借这么多钱，那明天他是不是一定会default？如果是，b’=0，不借了.
+                                    (1-isDefaultNextPeriod).*(...% if known today NOT for sure that default will happen next period
+                                    value0(:,:,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)... 
+                                    + 0 * ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime))...
+                                    +isDefaultNextPeriod.* ... % if known today for sure WILL default next period
+                                    (repmat(value0(:,1,iaPrime,ia),1,Nb).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > 0)... % next period if not default 
+                                    + 0 * ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= 0)));% next period if default 
+                                
                             end
                             mExpectedValueTomorrow = sum(valueTomorrow,3); % sum by the third dimension to get a Nk*Nb matrix
                             
@@ -403,6 +411,9 @@ title('Value Under Different Shocks given mean $z^{-}$','interpreter','latex')
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('Value','interpreter','latex')
+ylim([min(grid_k),max(grid_k)])
+zlim([-1.5*max(max(max(max(value)))),max(max(max(max(value))))])
+% legend('low productivity','median productivity','high productivity') % no use in mesh
 savefig('q1c_value_3D')
 
 figure(4)
@@ -417,6 +428,8 @@ title('Policy $k^\prime$ Under Different Shocks given mean $z^{-}$','interpreter
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('$k^\prime$','interpreter','latex')
+% legend('low productivity','median productivity','high productivity') % no use in mesh
+ylim([min(grid_k),max(grid_k)])
 savefig('q1c_kPolicy_3D')
 
 
@@ -432,7 +445,62 @@ title('Policy $b^\prime$ Under Different Shocks given mean $z^{-}$','interpreter
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('$bond^\prime$','interpreter','latex')
+% legend('low productivity','median productivity','high productivity') % no use in mesh
+ylim([min(grid_k),max(grid_k)])
 savefig('q1c_bPolicy_3D')
+
+% Stationary Distribution of this model - once default, value = 0
+% Compute the stationary distribution of firms. 
+
+distributionStationary0 = (1/(Nk*Nb*Na*Na))*ones(Nk,Nb,Na,Na);
+distance=100;
+tolerance=0.0000000001;
+iteration=0;
+
+while distance>tolerance
+    distributionStationary1 = zeros(Nk,Nb,Na,Na);
+    for ia=1:Na
+        for iaMinus=1:Na
+            for ib=1:Nb
+                for ik=1:Nk
+                    ikPrime = max(1,kPolicyIndex(ik,ib,ia,iaMinus));          
+                    ibPrime = max(1,bPolicyIndex(ik,ib,ia,iaMinus)); 
+
+                    prob = distributionStationary0(ik,ib,ia,iaMinus);
+                    for iaPrime=1:Na
+                        prob_aPrime = prob*m_a_prob(ia,iaPrime);
+                        distributionStationary1(ikPrime,ibPrime,iaPrime,ia) = distributionStationary1(ikPrime,ibPrime,iaPrime,ia) + prob_aPrime;
+                    end
+                    
+                end
+            end
+        end
+    end
+    
+    distance=sum(sum(sum(sum(abs(distributionStationary0-distributionStationary1)))));
+    distributionStationary0 = distributionStationary1;
+    iteration = iteration + 1;
+end
+
+% Plot the distribution
+
+figure(6);
+[bb,kk]=meshgrid(grid_b, grid_k);
+mesh(bb, kk, distributionStationary0(:,:,1,1));
+for iaMinus = 2:Na
+    for ia = 2:Na
+        hold on
+        mesh(bb, kk, distributionStationary0(:,:,ia,iaMinus));
+    end
+end
+title('Stationary Distribution','interpreter','latex');
+ylabel('Capital Stock $k$','interpreter','latex')
+xlabel('Debt $b$','interpreter','latex')
+zlabel('Probability Mass','interpreter','latex')
+
+savefig('q1c_stationary_distribution_3D')
+
+
 
 %% d) Stationary Distribution of Firms
 % Consider now a world with many such firms and no entry or exit. Specifically,
@@ -462,8 +530,9 @@ savefig('q1c_bPolicy_3D')
 kGridLength           = [15]; % number of points in grid for capital
 Nk = max(kGridLength);
 kMin            = 0.000001;
-kMax            = 10 * kSteadyState;
-grid_b = curvspace(0,kMax,Nb,2)';
+kMax            = 2.5 * kSteadyState;
+bMax            = 2 * kSteadyState;
+grid_b = curvspace(0,bMax,Nb,2)';
 
 % Required matrices and vectors
 % Dimensionality is k,b,a,aMinus
@@ -481,6 +550,11 @@ tic
 for i=1:length(kGridLength)
     
     grid_k           = curvspace(kMin,kMax,kGridLength(i),2)';
+    % Since the profitFunction takes so much time, let's calculate it all
+    % at once to retrieve later
+    mANkByNa = repmat(grid_a',kGridLength(i),1);
+    mKNkByNa = repmat(grid_k,1,Na);
+    profitNkByNa = profitFunction(mANkByNa,mKNkByNa); % Nk by Na
     
     % Calculate Default Probability
     mCutOffValue = zeros(kGridLength(i),Nb);
@@ -516,7 +590,7 @@ for i=1:length(kGridLength)
 
     kPrime = repmat(grid_k,1,Nb); % Nk*Nb matrix
     bondPrime = repmat(grid_b',kGridLength(i),1); % Nk*Nb matrix
-
+    
     tic
     while distance > tolerance
 %         tic
@@ -532,12 +606,14 @@ for i=1:length(kGridLength)
                 profit = profitNkByNa(ik,ia);
                 investment = investmentFunction(k,kPrime); % Nk*Nb matrix
 
-                for iaMinus = 1:Na
-                    RbMinus = mRb(:,:,iaMinus); % Nk*Nb matrix
-                    aMinus = grid_a(iaMinus);
+                for ib = 1:Nb
+                    bond = grid_b(ib);
+                    
+                    for iaMinus = 1:Na
+                        RbMinus = mRb(ik,ib,iaMinus); % scalar
+                        aMinus = grid_a(iaMinus);
 
-                    for ib = 1:Nb
-                        bond = grid_b(ib);
+
 
                         if (1-ttaoC)*profit + (1-ddelta)*k <= bond % if default this period
                             value (ik,ib,ia,iaMinus)=value0(1,1,ia,iaMinus); % after restructuring, you continue to run the firm at square 1 with 0 capital and 0 bond
@@ -550,7 +626,7 @@ for i=1:length(kGridLength)
 
                         else % if not default this period
 
-                            taxPayments = taxPaymentsFunction(k,bond,profit,RbMinus); % Nk*Nb matrix
+                            taxPayments = taxPaymentsFunction(k,bond,profit,RbMinus); % scalar
                             divident = dividentFunction(profit,investment,bond,bondPrime,RbMinus,taxPayments,isDefaultNextPeriod); % Nk*Nb matrix
 
                             valueTomorrow = zeros(kGridLength(i),Nb,Na);% k',b',a'
@@ -568,8 +644,8 @@ for i=1:length(kGridLength)
                                     value0(:,:,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)... 
                                     + value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime))...
                                     +isDefaultNextPeriod.* ... % if known today for sure WILL default next period
-                                    (repmat(value0(:,1,iaPrime,ia),1,Nb).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > bondPrime)... % next period if not default 
-                                    + value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= bondPrime)));% next period if default 
+                                    (repmat(value0(:,1,iaPrime,ia),1,Nb).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime > 0)... % next period if not default 
+                                    + value0(1,1,iaPrime,ia).* ((1-ttaoC)*profitPrime + (1-ddelta)*kPrime <= 0)));% next period if default 
                             end
                             mExpectedValueTomorrow = sum(valueTomorrow,3); % sum by the third dimension to get a Nk*Nb matrix
 
@@ -627,7 +703,7 @@ end
 toc
 save('resultD','value','kPolicy','bPolicy','kPolicyIndex','bPolicyIndex')
 
-figure(6);
+figure(7);
 [bb,kk]=meshgrid(grid_b, grid_k);
 mesh(bb, kk, value(:,:,1,round((Na+1)/2)));% yesterday's productivity is mean
 
@@ -640,9 +716,12 @@ title('Value Under Different Shocks given mean $z^{-}$','interpreter','latex')
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('Value','interpreter','latex')
+% zlim([-0.5*max(max(max(max(value)))),max(max(max(max(value))))])
+zlim([0,max(max(max(max(value))))])
+ylim([min(grid_k),max(grid_k)])
 savefig('q1d_value_3D')
 
-figure(7)
+figure(8)
 mesh(bb, kk, kPolicy(:,:,1,round((Na+1)/2)));% yesterday's productivity is mean
 
 for ia = 2:Na
@@ -654,10 +733,11 @@ title('Policy $k^\prime$ Under Different Shocks given mean $z^{-}$','interpreter
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('$k^\prime$','interpreter','latex')
+ylim([min(grid_k),max(grid_k)])
 savefig('q1d_kPolicy_3D')
 
 
-figure(8)
+figure(9)
 mesh(bb, kk, bPolicy(:,:,1,round((Na+1)/2)));% yesterday's productivity is mean
 
 for ia = 2:Na
@@ -669,6 +749,7 @@ title('Policy $b^\prime$ Under Different Shocks given mean $z^{-}$','interpreter
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('$bond^\prime$','interpreter','latex')
+ylim([min(grid_k),max(grid_k)])
 savefig('q1d_bPolicy_3D')
 
 
@@ -677,7 +758,7 @@ savefig('q1d_bPolicy_3D')
 
 distributionStationary0 = (1/(Nk*Nb*Na*Na))*ones(Nk,Nb,Na,Na);
 distance=100;
-tolerance=0.000001;
+tolerance=0.0000000001;
 iteration=0;
 
 while distance>tolerance
@@ -687,7 +768,7 @@ while distance>tolerance
             for ib=1:Nb
                 for ik=1:Nk
                     ikPrime = kPolicyIndex(ik,ib,ia,iaMinus);          
-                    ibPrime = bPolicyIndex(ik,ib,ia,iaMinus);
+                    ibPrime = bPolicyIndex(ik,ib,ia,iaMinus); 
 
                     prob = distributionStationary0(ik,ib,ia,iaMinus);
                     for iaPrime=1:Na
@@ -706,23 +787,36 @@ while distance>tolerance
 end
 
 % Plot the distribution
-figure(9);
-[bb,kk]=meshgrid(grid_b, grid_k);
-aMinusDescription = ["low","medium","high"];
 
-for iaMinus = 1:Na
-    subplot(1,Na,iaMinus);
-    mesh(bb, kk, distributionStationary0(:,:,1,iaMinus));
-    
+figure(10);
+[bb,kk]=meshgrid(grid_b, grid_k);
+mesh(bb, kk, distributionStationary0(:,:,1,1));
+for iaMinus = 2:Na
     for ia = 2:Na
-        hold on;
-        mesh(bb,kk,distributionStationary0(:,:,ia,iaMinus));
+        hold on
+        mesh(bb, kk, distributionStationary0(:,:,ia,iaMinus));
     end
-    title(['Distribution $z^{-}$ ',aMinusDescription(iaMinus)],'interpreter','latex');
-    ylabel('Capital Stock $k^\prime$','interpreter','latex')
-    xlabel('Debt $b^\prime$','interpreter','latex')
-    zlabel('Probability Mass','interpreter','latex')
 end
+title('Stationary Distribution','interpreter','latex');
+ylabel('Capital Stock $k$','interpreter','latex')
+xlabel('Debt $b$','interpreter','latex')
+zlabel('Probability Mass','interpreter','latex')
+    
+% aMinusDescription = ["low","medium","high"];
+% 
+% for iaMinus = 1:Na
+%     subplot(1,Na,iaMinus);
+%     mesh(bb, kk, distributionStationary0(:,:,1,iaMinus));
+%     
+%     for ia = 2:Na
+%         hold on;
+%         mesh(bb,kk,distributionStationary0(:,:,ia,iaMinus));
+%     end
+%     title(['Distribution $z^{-}$ ',aMinusDescription(iaMinus)],'interpreter','latex');
+%     ylabel('Capital Stock $k^\prime$','interpreter','latex')
+%     xlabel('Debt $b^\prime$','interpreter','latex')
+%     zlabel('Probability Mass','interpreter','latex')
+% end
     
 savefig('q1d_stationary_distribution_3D')
 
@@ -778,7 +872,9 @@ fprintf('Average Default Probability is %2.10f\n', defaultProbability);
 % riskyBondReturn = sum(sum(sum(sum((min(1000000000,Rf/(1-mDefault4D))).*distributionStationary0))));
 riskyBondReturn = sum(sum(sum(sum((min(10000000000000,Rf/(1-mDefault4D))).*((mDefault4D~=1).*distributionStationary0)))));
 fprintf('Required return on risky bonds on average is %2.8f\n', riskyBondReturn);
-% As we can see, corporate bonds are basically riskfree.
+if abs(riskyBondReturn-Rf)<0.001
+    fprintf('We can see risky bonds are basically risk-free.\n');
+end
 
 % riskyBondReturn = Rf/(1-defaultProbability);
 % fprintf('Required return on risky bonds is %2.8f\n', riskyBondReturn);
@@ -812,12 +908,14 @@ end
 
 mRbMinus4D = zeros(kGridLength(1),Nb,Na,Na);
 for ia = 1:Na
-    a = grid_a(ia);
-    for iaMinus = 1:Na
-        aMinus = grid_a(iaMinus);
-        mRbMinus4D(:,:,ia,iaMinus)=mRb(:,:,iaMinus);
-    end
+    mRbMinus4D(:,:,ia,:)=mRb;
 end
+%     a = grid_a(ia);
+%     for iaMinus = 1:Na
+%         aMinus = grid_a(iaMinus);
+%         mRbMinus4D(:,:,ia,iaMinus)=mRb(:,:,iaMinus);
+%     end
+% end
     
 mInvestment4D = investmentFunction(mK4D,mK4D);
 mTaxPayments4D = taxPaymentsFunction(mK4D,mBond4D,mProfit4D,mRbMinus4D);
@@ -828,10 +926,9 @@ fractionOfFirmsIssuingEquity = sum(sum(sum(sum(  mIsIssuingEquity .*distribution
 fprintf('The fraction of firms issuing equity is %2.8f\n', fractionOfFirmsIssuingEquity);
 
 T = table(defaultProbability,riskyBondReturn,leverageRatio,investment2Capital,fractionOfFirmsIssuingEquity)
+save('table','T')
 %     defaultProbability    riskyBondReturn       leverageRatio      investment2Capital    fractionOfFirmsIssuingEquity
 %     __________________    ________________    _________________    __________________    ____________________________
 % 
-%   3.56994771855542e-09    1.01010100649501    0.539685179800697     2.00309413226414          0.030296293479109      
-
-
+%             0             1.01010101010102    0.743309494850323     1.96200184814086          0.0151481309209372      
 
