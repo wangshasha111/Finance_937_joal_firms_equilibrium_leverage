@@ -400,19 +400,22 @@ save('resultC','value','kPolicy','bPolicy','kPolicyIndex','bPolicyIndex')
 
 figure(3);
 [bb,kk]=meshgrid(grid_b, grid_k);
-mesh(bb, kk, value(:,:,1,round((Na+1)/2)));% yesterday's productivity is mean
+mesh(bb, kk, value(:,:,1,1));
 
 for ia = 2:Na
-    hold on;
-    mesh(bb, kk, value(:,:,ia,round((Na+1)/2)));    
+    for iaMinus = 2:Na
+        hold on;
+        mesh(bb, kk, value(:,:,ia,iaMinus));    
+    end
 end
 
-title('Value Under Different Shocks given mean $z^{-}$','interpreter','latex')
+title('Value Under Different Shocks','interpreter','latex')
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('Value','interpreter','latex')
 ylim([min(grid_k),max(grid_k)])
-zlim([-1.5*max(max(max(max(value)))),max(max(max(max(value))))])
+xlim([min(grid_b),max(grid_b)])
+% zlim([-1.5*max(max(max(max(value)))),max(max(max(max(value))))])
 % legend('low productivity','median productivity','high productivity') % no use in mesh
 savefig('q1c_value_3D')
 
@@ -705,14 +708,16 @@ save('resultD','value','kPolicy','bPolicy','kPolicyIndex','bPolicyIndex')
 
 figure(7);
 [bb,kk]=meshgrid(grid_b, grid_k);
-mesh(bb, kk, value(:,:,1,round((Na+1)/2)));% yesterday's productivity is mean
+mesh(bb, kk, value(:,:,1,1));
 
 for ia = 2:Na
-    hold on;
-    mesh(bb, kk, value(:,:,ia,round((Na+1)/2)));    
+    for iaMinus = 2:Na
+        hold on;
+        mesh(bb, kk, value(:,:,ia,iaMinus));    
+    end
 end
 
-title('Value Under Different Shocks given mean $z^{-}$','interpreter','latex')
+title('Value Under Different Shocks','interpreter','latex')
 ylabel('Capital Stock $k$','interpreter','latex')
 xlabel('Debt $b$','interpreter','latex')
 zlabel('Value','interpreter','latex')
