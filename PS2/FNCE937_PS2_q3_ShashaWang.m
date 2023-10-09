@@ -6,7 +6,7 @@
 clear;
 close all;
 
-cd 'E:\Dropbox\fall 19-20\Finance 937\PS2\question_3'
+% cd 'E:\Dropbox\fall 19-20\Finance 937\PS2\question_3'
 
 %% Part III: Optimal Default
 % First we need to decide on the default behavior - once default, will the
@@ -735,7 +735,8 @@ zlim([-max(max(max(max(mValue)))),max(max(max(max(mValue))))])
 zlabel('Value','interpreter','latex')
 savefig('q3d_value_3D_resultA_and_resultD')
 
-% As we can see from the picture, the difference is only at the region where capital is extremely low and bond is extremely high.
+% As we can see from the picture, the difference is only at the region where 
+% capital is extremely low and bond is extremely high.
 
 % This makes sense, because in a model where interest rate on risky bond
 % does not depend on the default risk but is exogenously given, there will
