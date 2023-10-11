@@ -1,6 +1,6 @@
-# Finance_937_joal_firms_equilibrium_leverage
+# General Equilibrium: How Do Firms Make Investment Decisions under Debt Constraints
 
-This folder contains the projects on firm equilibrium problems [PS1](https://github.com/wangshasha111/Finance_937_joal_firms_equilibrium_leverage/tree/master/PS1) and firm leverage problems [PS2](https://github.com/wangshasha111/Finance_937_joal_firms_equilibrium_leverage/tree/master/PS2).
+This folder contains the projects on firm equilibrium problems [(Project 1)](https://github.com/wangshasha111/Finance_937_joal_firms_equilibrium_leverage/tree/master/Project1_Firms_equilibrium) and firm leverage problems [(Project 2)](https://github.com/wangshasha111/Finance_937_joal_firms_equilibrium_leverage/tree/master/Project2_Leverage).
 
 ## Goals
 The projects model firm's financial decisions regarding investment, production, and leverage decisions. 
@@ -8,7 +8,7 @@ The projects model firm's financial decisions regarding investment, production, 
 ## Outputs
 The project descriptions are written in the PDF files in each folder.
 
-The Matlab programs are named after the index number of the problem set and the question, e.g., "FNCE937_PS2_q1_ShashaWang.m" is for the Question 1 of Problem set 2 at course FNCE937.
+The Matlab programs are named after the index number of the step and of the project, e.g., "FNCE937_P2_q1_ShashaWang.m" is for the Step 1 of Project 2.
 
 
 
